@@ -1,0 +1,79 @@
+# KPI tile configuration for the Executive Dashboard.
+#
+# Thresholds and targets live here rather than in code so they can change
+# without a code deploy. If they need to change without any deploy at all, or
+# vary by client or cluster, promote them to a table keyed by
+# kpi x scope x effective_date -- see docs/data-gaps.md, gap G-07.
+#
+# direction:
+#   higher_is_better - value >= good is good, value >= caution is caution,
+#                      otherwise critical
+#   lower_is_better  - value <= good is good, value <= caution is caution,
+#                      otherwise critical
+#
+# Every tile declares a comparison anchor. A tile with no anchor renders a bare
+# value, which the functional requirements treat as a defect.
+
+version: 1
+
+defaults:
+  sparkline_days: 90
+  snapshot_grain: daily
+
+client_custom_reports:
+  slots: 6
+
+kpis:
+  - id: comp_to_rev_ratio
+    label: Comp to Rev Ratio
+    direction: lower_is_better
+    unit: ratio
+    thresholds:
+      good: 0.55
+      caution: 0.62
+    comparison: target
+    drilldown: pending_definition
+
+  - id: staffing_needs_met
+    label: Staffing Needs Met
+    direction: higher_is_better
+    unit: percent
+    thresholds:
+      good: 95
+      caution: 85
+    comparison: target
+    drilldown: staffing-needs-met
+
+  - id: data_quality_score
+    label: Data Quality Score
+    direction: higher_is_better
+    unit: percent
+    thresholds:
+      good: 98
+      caution: 95
+    comparison: target
+    drilldown: pending_definition
+
+  - id: cases_on_schedule
+    label: Cases on Schedule
+    direction: higher_is_better
+    unit: percent
+    thresholds:
+      good: 90
+      caution: 80
+    comparison: target_and_prior_period
+    drilldown: cases-on-schedule
+
+  - id: avg_intercom_response_time
+    label: Avg. Intercom Response Time
+    direction: lower_is_better
+    unit: hours
+    thresholds:
+      good: 4
+      caution: 8
+    comparison: target_and_prior_period
+    drilldown: pending_definition
+
+# Threshold values above are placeholders pending Bruce's input and the catalog
+# inventory. They are shaped correctly -- band ordering respects each KPI's
+# direction -- so they can be replaced without any structural change.

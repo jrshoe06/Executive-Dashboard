@@ -1,8 +1,12 @@
--- Inventory: confirm the grain of a candidate table.
+-- STEP 2 OF 2 -- confirm the grain of a candidate table.
 --
--- A candidate only satisfies a requirement if its grain matches the one stated
--- in docs/data-requirements.md. This script checks a proposed key: it is the
--- grain if the row count equals the distinct key count.
+-- Run only after 01_inventory_export.sql has identified candidates, once per
+-- shortlisted table. A candidate only satisfies a requirement if its grain
+-- matches the one stated in docs/data-requirements.md. This script checks a
+-- proposed key: it is the grain if the row count equals the distinct key count.
+--
+-- UNLIKE STEP 1, THIS READS TABLE DATA -- row counts, snapshot dates and
+-- reason-code values. Review the output before attaching it to an issue or PR.
 --
 -- Set :catalog, :schema, :table and edit the key expression list below.
 

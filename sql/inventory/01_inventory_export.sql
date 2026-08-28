@@ -16,6 +16,11 @@
 --   column_list    full column list, so grain can be assessed without a second
 --                  round trip
 --
+-- Catalogs excluded below are Databricks-managed ones. Note that
+-- `hive_metastore` is NOT excluded: it is a common default catalog that can
+-- hold real user tables, so it is left in deliberately. If your workspace has
+-- other system-like catalogs, add them to the exclusion list.
+--
 -- See docs/catalog-inventory.md for what happens with the output.
 
 WITH cols AS (

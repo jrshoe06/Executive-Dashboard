@@ -16,9 +16,11 @@ SELECT
   count(*) = count(DISTINCT grain_key) AS key_is_grain
 FROM (
   SELECT concat_ws('|',
-    /* Edit here only: the proposed grain columns, e.g. case_id,
-       or role_id and week_start for a role x week grain. */
-    cast(case_id AS string)
+    /* EDIT HERE ONLY -- replace with the proposed grain columns, e.g.
+       cast(case_id AS string), or for a role x week grain:
+       cast(role_id AS string), cast(week_start AS string).
+       Left as an obvious placeholder so an unedited run fails loudly. */
+    cast(replace_with_your_grain_column AS string)
   ) AS grain_key
   FROM identifier(:catalog || '.' || :schema || '.' || :table)
 );
@@ -30,7 +32,7 @@ SELECT
   min(snapshot_date)                        AS first_snapshot,
   max(snapshot_date)                        AS latest_snapshot,
   count(DISTINCT snapshot_date)             AS distinct_days,
-  datediff(max(snapshot_date), min(snapshot_date)) + 1 AS calendar_days,
+  datediff(max(snapshot_date), min(snapshot_date)) + 1 AS calendar_day_span,
   count(DISTINCT snapshot_date)
     = datediff(max(snapshot_date), min(snapshot_date)) + 1 AS is_complete_daily
 FROM identifier(:catalog || '.' || :schema || '.' || :table);

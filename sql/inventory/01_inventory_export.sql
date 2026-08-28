@@ -8,13 +8,12 @@
 -- a single row of business data, so the output contains no client, case,
 -- personnel or compensation values and is safe to share.
 --
--- Output: one row per table or view in the metastore that is either in a
--- silver/gold schema or keyword-matches a dashboard requirement.
---
---   requirements   which dashboard component(s) the object might serve, or
---                  '(unmatched)' for silver/gold objects nothing matched
---   column_list    full column list, so grain can be assessed without a second
---                  round trip
+-- OUTPUT IS DELIBERATELY COMPACT. An earlier version emitted every column name
+-- for every object, which produces a CSV too large to attach on a real
+-- metastore. Instead each row carries a column_count plus up to 12 grain-
+-- relevant "key columns" (ids, dates, codes, amounts) -- enough to shortlist
+-- candidates. Use 01b_column_detail.sql to pull full column lists for the
+-- handful of tables that actually matter.
 --
 -- Catalogs excluded below are Databricks-managed ones. Note that
 -- `hive_metastore` is NOT excluded: it is a common default catalog that can
@@ -28,7 +27,24 @@ WITH cols AS (
     table_catalog,
     table_schema,
     table_name,
-    array_join(array_sort(collect_set(lower(column_name))), ', ') AS column_list
+    count(*) AS column_count,
+    -- Only grain-relevant column names are carried through, capped at 12, so a
+    -- wide table does not blow up the export.
+    array_join(
+      slice(
+        array_sort(
+          collect_set(
+            CASE
+              WHEN lower(column_name) RLIKE
+                '(_id$|^id$|_key$|_code$|_date$|_at$|_ts$|week|month|period|snapshot|amount|_amt|revenue|comp|status|reason|role|client|cluster|case|count)'
+              THEN lower(column_name)
+            END
+          )
+        ),
+        1, 12
+      ),
+      ', '
+    ) AS key_columns
   FROM system.information_schema.columns
   GROUP BY table_catalog, table_schema, table_name
 ),
@@ -39,8 +55,10 @@ objects AS (
     t.table_schema,
     t.table_name,
     t.table_type,
-    coalesce(t.comment, '')       AS table_comment,
-    coalesce(c.column_list, '')   AS column_list,
+    -- Comments are truncated: some tables carry very long descriptions.
+    substr(coalesce(t.comment, ''), 1, 200) AS table_comment,
+    coalesce(c.column_count, 0)             AS column_count,
+    coalesce(c.key_columns, '')             AS key_columns,
     t.last_altered
   FROM system.information_schema.tables AS t
   LEFT JOIN cols AS c
@@ -74,7 +92,7 @@ matched AS (
     array_join(array_sort(collect_set(r.requirement)), ', ') AS requirements
   FROM objects AS o
   JOIN requirements AS r
-    ON lower(concat_ws(' ', o.table_name, o.table_comment, o.column_list)) RLIKE r.pattern
+    ON concat_ws(' ', lower(o.table_name), lower(o.table_comment), o.key_columns) RLIKE r.pattern
   GROUP BY o.table_catalog, o.table_schema, o.table_name
 )
 
@@ -84,8 +102,9 @@ SELECT
   o.table_name,
   o.table_type,
   coalesce(m.requirements, '(unmatched)') AS requirements,
+  o.column_count,
+  o.key_columns,
   o.table_comment,
-  o.column_list,
   o.last_altered
 FROM objects AS o
 LEFT JOIN matched AS m

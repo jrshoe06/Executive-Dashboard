@@ -23,9 +23,16 @@ catalog. No widgets, no parameters, no edits.
 
 Download the result as CSV and attach it to the issue or PR. That one file is
 enough to resolve most of the `Candidate table — TBD` placeholders in
-[data-requirements.md](data-requirements.md), because it returns the full
-column list per object alongside a `requirements` tag suggesting which
-dashboard component each object might serve.
+[data-requirements.md](data-requirements.md), because each row carries a
+`requirements` tag suggesting which dashboard component the object might serve,
+a `column_count`, and up to 12 grain-relevant `key_columns`.
+
+**The output is deliberately compact.** An earlier version emitted every column
+name for every object, which produces a CSV too large to attach on a real
+metastore. Rows are now roughly 150 bytes, so even a metastore with tens of
+thousands of objects stays a few megabytes. If it is still too large to attach,
+add a `WHERE` on `table_catalog` to restrict to the BAL catalog, or zip the
+CSV.
 
 **What it reads:** `system.information_schema` only — object names, column
 names and comments. It does not read a single row of business data, so the
@@ -38,6 +45,15 @@ named `*silver*` / `*gold*`. The query already keeps any object that
 keyword-matches a requirement regardless of schema name, so a near-empty result
 points at permissions rather than naming. Send `SHOW CATALOGS;` output instead
 and the query can be re-scoped.
+
+### Step 1b (optional) — Full column detail for a shortlist
+
+If the `key_columns` from step 1 are not enough to judge a candidate's grain,
+run [`sql/inventory/01b_column_detail.sql`](../sql/inventory/01b_column_detail.sql)
+with the shortlisted tables listed in its `IN` clause. Scoped to a handful of
+tables the output stays small; do not widen it to the whole catalog, which is
+what made the original export too large. Metadata only, so also safe to attach.
+
 
 ### Step 2 — Confirm grain on the shortlisted tables
 

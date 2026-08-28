@@ -7,15 +7,17 @@
 -- Set :catalog, :schema, :table and edit the key expression list below.
 
 SELECT
-  count(*)                                  AS row_count,
-  count(DISTINCT concat_ws('|',
-    /* Edit: the proposed grain columns, e.g. case_id, or role_id, week_start */
+  count(*)                        AS row_count,
+  count(DISTINCT grain_key)       AS distinct_key_count,
+  count(*) = count(DISTINCT grain_key) AS key_is_grain
+FROM (
+  SELECT concat_ws('|',
+    /* Edit here only: the proposed grain columns, e.g. case_id,
+       or role_id and week_start for a role x week grain. */
     cast(case_id AS string)
-  ))                                        AS distinct_key_count,
-  count(*) = count(DISTINCT concat_ws('|',
-    cast(case_id AS string)
-  ))                                        AS key_is_grain
-FROM identifier(:catalog || '.' || :schema || '.' || :table);
+  ) AS grain_key
+  FROM identifier(:catalog || '.' || :schema || '.' || :table)
+);
 
 -- Snapshot coverage: the KPI tiles need a daily snapshot grain, so confirm the
 -- snapshot column is populated daily and how far back the history runs. Edit
